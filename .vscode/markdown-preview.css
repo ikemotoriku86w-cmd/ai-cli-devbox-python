@@ -1,0 +1,124 @@
+/*
+ * VS Code Markdown Preview Custom CSS
+ * Based on md2pdf (grannet/md2pdf) styling
+ */
+
+/* Body / Base */
+body {
+    background-color: #ffffff;
+    color: #333333;
+    line-height: 1.4;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 40px;
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+    color: #000000;
+    margin-top: 20px;
+    margin-bottom: 10px;
+    font-weight: 600;
+}
+
+h1 { font-size: 32px; }
+h2 { font-size: 28px; }
+h3 { font-size: 24px; }
+h4 { font-size: 20px; }
+h5 { font-size: 18px; }
+h6 { font-size: 16px; }
+
+/* Paragraphs */
+p {
+    margin-top: 5px;
+    margin-bottom: 5px;
+}
+
+/* Links */
+a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Inline code */
+code {
+    background-color: #f6f8fa;
+    color: #333333;
+    border: 1px solid #e1e4e8;
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.875em;
+}
+
+/* Code blocks */
+pre {
+    background-color: #1e1e1e;
+    border: 1px solid #333333;
+    border-radius: 6px;
+    padding: 10px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    overflow-x: auto;
+}
+
+pre code {
+    background-color: transparent;
+    color: #d4d4d4;
+    border: none;
+    padding: 0;
+    font-size: 0.85em;
+}
+
+/* Blockquotes */
+blockquote {
+    color: #6a737d;
+    border-left: 4px solid #dfe2e5;
+    padding: 5px 20px;
+}
+
+blockquote p {
+    margin: 5px 0;
+}
+
+/* Tables */
+table {
+    border-collapse: collapse;
+    margin: 10px 0;
+    width: 100%;
+}
+
+th {
+    background-color: #f6f8fa;
+    font-weight: 600;
+}
+
+th, td {
+    border: 1px solid #dfe2e5;
+    padding: 8px;
+    text-align: left;
+}
+
+/* Horizontal rule */
+hr {
+    border: none;
+    border-top: 1px solid #e1e4e8;
+    margin: 20px 0;
+}
+
+/* Lists */
+ul, ol {
+    padding-left: 20px;
+}
+
+li {
+    margin: 2px 0;
+}
+
+/* Images */
+img {
+    max-width: 100%;
+}

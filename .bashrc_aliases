@@ -1,0 +1,2 @@
+alias c='claude --dangerously-skip-permissions'
+alias cu='sudo env PATH=$PATH npm update -g @anthropic-ai/claude-code'

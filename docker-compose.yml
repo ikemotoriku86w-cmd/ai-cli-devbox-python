@@ -1,0 +1,22 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - .:/app
+      - claude-code-config:/home/appuser/.claude
+      - codex-config:/home/appuser/.codex
+      - gemini-config:/home/appuser/.gemini
+    env_file:
+      - .env
+    environment:
+      - PYTHONPATH=/app
+    command: sleep infinity
+    tty: true
+    stdin_open: true
+
+volumes:
+  claude-code-config:
+  codex-config:
+  gemini-config:

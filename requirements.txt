@@ -1,0 +1,7 @@
+# 最小限の依存関係
+python-dotenv>=1.0.0
+
+# 必要に応じて追加
+# requests>=2.31.0
+# pandas>=2.0.0
+# fastapi>=0.100.0
