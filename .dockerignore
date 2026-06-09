@@ -1,0 +1,33 @@
+# ビルドコンテキストから除外（BuildKit へ渡さない）。
+# 秘密情報・ローカル設定・キャッシュ類を明示的に除外する。
+
+# VCS
+.git
+
+# Secrets / ローカル設定
+.env
+.env.*
+.claude/settings.local.json
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+credentials*.json
+*.secret
+secrets.*
+
+# Python キャッシュ・ビルド成果物
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+build/
+dist/
+*.egg-info/
+
+# データ・ログ
+data/
+*.log
+logs/

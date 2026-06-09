@@ -1,8 +1,10 @@
 services:
   app:
-    # 共有ベースイメージを「参照するだけ」。全プロジェクトが同じタグ＝実体は1コピー。
-    # 先に一度だけ：docker build -t ai-devbox:1.0 . でベースを作る。
-    image: ai-devbox:1.0
+    # プロジェクト固有のイメージをビルドする（build: .）。
+    # tools 層は BuildKit キャッシュ／内容アドレス可能レイヤーで他プロジェクトと共有され、
+    # requirements.txt 変更時のみ最終層が再ビルドされる。
+    # 固定共有タグ（旧 image: ai-devbox:1.0）は使わないため、タグ上書き衝突は起きない。
+    build: .
     volumes:
       - .:/app
       # 認証・設定は名前付きボリュームに分離（イメージには焼き込まない）。
@@ -10,8 +12,6 @@ services:
       - claude-code-config:/home/appuser/.claude
       - codex-config:/home/appuser/.codex
       - gemini-config:/home/appuser/.gemini
-    env_file:
-      - .env
     environment:
       - PYTHONPATH=/app
     command: sleep infinity

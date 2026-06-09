@@ -15,14 +15,13 @@ Codex CLI を使って、指定されたタスクを実行します。
 以下のコマンドで Codex CLI を非対話型実行してください：
 
 ```bash
-npx codex exec --full-auto --sandbox read-only --skip-git-repo-check "$ARGUMENTS"
+codex exec --sandbox read-only --skip-git-repo-check "$ARGUMENTS"
 ```
 
 ## オプション説明
 
 - `exec`: 非対話型実行モード
-- `--full-auto`: 自動実行モード
-- `--sandbox read-only`: 読み取り専用サンドボックスで安全に実行
+- `--sandbox read-only`: ファイルへの書き込みを制限した読み取り専用サンドボックス（調査用コマンドの実行は可能）
 - `--skip-git-repo-check`: git リポジトリチェックをスキップ
 
 ## 注意事項

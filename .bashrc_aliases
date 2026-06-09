@@ -1,2 +1,5 @@
 alias c='claude --dangerously-skip-permissions'
-alias cu='sudo env PATH=$PATH npm update -g @anthropic-ai/claude-code'
+
+# ツールのバージョン更新はコンテナ内 npm update では行わない（再生成で消え、
+# Dockerfile の ARG ピン留め運用と衝突する）。更新は Dockerfile 冒頭の ARG を
+# 編集して再ビルド（docker compose up --build）するのが正。
