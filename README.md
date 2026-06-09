@@ -66,6 +66,8 @@ Python 依存だけを `final` ステージで追加する構成です。`tools`
 │   ├── settings.json       # Claude Code 設定
 │   ├── rules/              # エージェント協働ルール
 │   └── skills/             # カスタムスキル定義（codex）
+├── scripts/
+│   └── update-claude-code  # Claude Code を安全に更新（ARG 書き換え→再ビルド）
 ├── requirements.txt        # Python 依存関係（== 固定）
 └── .bashrc_aliases         # シェルエイリアス
 ```
@@ -76,6 +78,33 @@ Python 依存だけを `final` ステージで追加する構成です。`tools`
 - **ツールのバージョン変更**: `Dockerfile` 冒頭の ARG を編集 → イメージを再ビルド
 - **Claude Code 設定**: `.claude/settings.json` を編集
 - **VS Code 拡張機能追加**: `.devcontainer/devcontainer.json` の `extensions` に追加
+
+## Claude Code の更新
+
+Claude Code は更新が頻繁なため、更新スクリプトを用意しています。
+**Dockerfile のピン留めを「正」としたまま**、バージョンの書き換えと再ビルドを 1 コマンドで行います。
+
+```bash
+# ホスト側で実行（コンテナ内からは docker を操作できないため）
+./scripts/update-claude-code            # stable へ更新（既定）
+./scripts/update-claude-code latest     # latest へ更新
+./scripts/update-claude-code 2.1.170    # 明示バージョンへ更新
+```
+
+スクリプトは次を行います：
+
+1. npm の dist-tag から対象バージョンを取得（既定は回帰を避けやすい **stable**。約1週間遅れ）
+2. `Dockerfile` の `ARG CLAUDE_CODE_VERSION` を書き換え
+3. `docker compose up --build -d` で再ビルド・起動（Claude Code は独立レイヤーなので再インストールは Claude Code のみ）
+4. 反映後の `claude --version` を確認
+
+> コンテナ内の自動更新は `DISABLE_AUTOUPDATER=1` で無効化しています（イメージのピン版と
+> 実行版が乖離するのを防ぐため）。バージョン変更は `Dockerfile` の Git 差分として残ります。
+> 以前の版に戻したいときは、その版を明示指定して再実行すれば安全に戻せます
+> （例: `./scripts/update-claude-code 2.1.168`）。ビルドに失敗した場合はスクリプトが
+> `Dockerfile` を自動で元に戻すため、書き換えだけが残ることはありません。
+>
+> コンテナ内で `cu` と打つと、このスクリプトの実行方法が表示されます。
 
 ## 前提条件
 

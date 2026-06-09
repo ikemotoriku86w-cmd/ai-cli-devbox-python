@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+# ============================================================
+# Claude Code を「Dockerfile のピン留めを正としたまま」安全に更新する。
+#
+#   1. npm の dist-tag / 明示バージョンから対象を決定（既定: stable）
+#   2. npm 上に存在することを確認
+#   3. Dockerfile の ARG CLAUDE_CODE_VERSION を書き換え
+#   4. イメージを再ビルドして起動（docker compose up --build -d）
+#   5. 反映後の claude --version を確認
+#
+# ビルドに失敗（または中断）した場合は、書き換えた Dockerfile を元の内容へ自動復元する
+# （git checkout は使わない＝バージョン以外の未コミット編集を消さない）。
+#
+# 使い方（ホスト側で実行。コンテナ内からは docker を操作できない）:
+#   ./scripts/update-claude-code            # stable へ更新
+#   ./scripts/update-claude-code latest     # latest へ更新
+#   ./scripts/update-claude-code 2.1.170    # 明示バージョン（x.y.z 形式）へ更新
+#   ./scripts/update-claude-code stable -y  # 確認プロンプトを省略
+#
+# 以前のバージョンに戻したいときも、その版を明示指定すれば安全に戻せる:
+#   ./scripts/update-claude-code 2.1.168
+#
+# ホスト依存は curl / docker のみ（npm・jq・python は不要）。
+# ============================================================
+set -euo pipefail
+
+REGISTRY="https://registry.npmjs.org/@anthropic-ai%2Fclaude-code"
+DIST_TAGS_URL="https://registry.npmjs.org/-/package/@anthropic-ai%2Fclaude-code/dist-tags"
+
+# --- 引数解釈（channel/version は最大1個。不明オプションはエラー） ---
+CHANNEL=""
+ASSUME_YES=0
+for arg in "$@"; do
+  case "$arg" in
+    -y|--yes)
+      ASSUME_YES=1 ;;
+    -*)
+      echo "エラー: 不明なオプション '$arg'" >&2; exit 2 ;;
+    *)
+      if [ -n "$CHANNEL" ]; then
+        echo "エラー: チャンネル/バージョンは1つだけ指定してください（'$CHANNEL' と '$arg'）。" >&2
+        exit 2
+      fi
+      CHANNEL="$arg" ;;
+  esac
+done
+CHANNEL="${CHANNEL:-stable}"
+
+# リポジトリルートへ移動
+cd "$(dirname "$0")/.."
+[ -f Dockerfile ] || { echo "エラー: Dockerfile が見つかりません。" >&2; exit 1; }
+
+# --- 1/2. 目標バージョンの決定と存在確認 ---
+if [[ "$CHANNEL" =~ ^[0-9] ]]; then
+  # 明示バージョン: 厳密に x.y.z（任意で -prerelease / +build）を要求
+  if [[ ! "$CHANNEL" =~ ^[0-9]+\.[0-9]+\.[0-9]+([+-][0-9A-Za-z.-]+)?$ ]]; then
+    echo "エラー: バージョン形式が不正です: '$CHANNEL'（例: 2.1.170）" >&2
+    exit 2
+  fi
+  TARGET="$CHANNEL"
+  echo "目標バージョン: ${TARGET}（明示指定）"
+  if ! curl -fsSL "$REGISTRY/$TARGET" >/dev/null 2>&1; then
+    echo "エラー: バージョン $TARGET は npm 上に存在しません。" >&2
+    exit 2
+  fi
+else
+  # dist-tag（stable / latest / next など）
+  echo "dist-tag '$CHANNEL' のバージョンを取得中..."
+  TARGET="$(curl -fsSL "$DIST_TAGS_URL" \
+    | grep -oE "\"$CHANNEL\":\"[^\"]+\"" | head -1 | cut -d'"' -f4 || true)"
+  if [[ -z "$TARGET" ]]; then
+    echo "エラー: dist-tag '$CHANNEL' を取得できませんでした（stable / latest / next など）。" >&2
+    exit 2
+  fi
+  echo "目標バージョン: ${TARGET}（channel=${CHANNEL}）"
+fi
+
+# --- 現在のピンを確認（行全体の値を取得。プレリリース表記もそのまま扱う） ---
+CURRENT="$(sed -nE 's/^ARG CLAUDE_CODE_VERSION=([^[:space:]]+)$/\1/p' Dockerfile | head -1)"
+echo "現在のピン:     ${CURRENT:-不明}"
+
+# --- 失敗/中断時に Dockerfile を元へ自動復元する仕掛け ---
+MODIFIED=0
+BUILD_OK=0
+BACKUP="$(mktemp)"
+cp Dockerfile "$BACKUP"
+cleanup() {
+  if [ "$MODIFIED" -eq 1 ] && [ "$BUILD_OK" -ne 1 ]; then
+    cp "$BACKUP" Dockerfile && \
+      echo "失敗/中断のため Dockerfile を元の内容に復元しました。" >&2
+  fi
+  rm -f "$BACKUP"
+}
+trap cleanup EXIT
+
+# --- 3. Dockerfile 書き換え ---
+if [[ "$CURRENT" == "$TARGET" ]]; then
+  echo "既にピンは $TARGET です。再ビルドのみ行います。"
+else
+  if [[ "$ASSUME_YES" -ne 1 ]]; then
+    read -r -p "Dockerfile を $CURRENT -> $TARGET に書き換えて再ビルドします。続行しますか? [y/N] " ans
+    case "$ans" in
+      y|Y|yes|YES) ;;
+      *) echo "中止しました。"; exit 0 ;;
+    esac
+  fi
+  # 行全体を置換（BSD/GNU sed 両対応）。値の数字以外（-beta.1 等）も取り残さない。
+  sed -i.bak -E "s/^ARG CLAUDE_CODE_VERSION=.*/ARG CLAUDE_CODE_VERSION=${TARGET}/" Dockerfile \
+    && rm -f Dockerfile.bak
+  MODIFIED=1
+  # 書き換え結果を厳密確認（不一致なら trap が Dockerfile を復元）
+  if ! grep -qx "ARG CLAUDE_CODE_VERSION=${TARGET}" Dockerfile; then
+    echo "エラー: Dockerfile の書き換えに失敗しました（ARG 行を確認してください）。" >&2
+    exit 1
+  fi
+  echo "Dockerfile を $CURRENT -> $TARGET に更新しました。"
+fi
+
+# --- 4. 再ビルド＆起動（失敗すれば trap が Dockerfile を復元） ---
+echo "=== 再ビルドして起動 ==="
+docker compose up --build -d
+BUILD_OK=1
+
+# --- 5. 反映確認（ここでの失敗は Dockerfile を巻き戻さない。イメージは更新済み） ---
+# claude --version の出力（例: "2.1.169 (Claude Code)"）から先頭の版を取り出して照合する。
+echo "=== 反映確認 ==="
+INSTALLED="$(docker compose exec -T --user appuser app claude --version 2>/dev/null \
+  | grep -oE '^[0-9][0-9A-Za-z.+-]*' | head -1 || true)"
+if [ "$INSTALLED" = "$TARGET" ]; then
+  echo "確認 OK: claude $INSTALLED"
+else
+  echo "エラー: 実行版 '${INSTALLED:-取得失敗}' が目標 '${TARGET}' と一致しません。コンテナ状態を確認してください。" >&2
+  exit 1
+fi
+
+echo
+echo "完了。差分は 'git diff Dockerfile' で確認できます。"
+echo "以前の版に戻すには './scripts/update-claude-code <旧バージョン>' を実行してください。"
