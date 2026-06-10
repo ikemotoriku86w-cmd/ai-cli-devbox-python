@@ -45,9 +45,8 @@ ENV PYTHONUNBUFFERED=1 \
     TZ=Asia/Tokyo \
     NODE_OPTIONS=--max-old-space-size=4096
 
-# Claude Code の自動更新を無効化（イメージのピン版と実行版が乖離するのを防ぐ）。
-# 更新は scripts/update-claude-code（ARG 書き換え→再ビルド）で行う。
-ENV DISABLE_AUTOUPDATER=1
+# Claude Code は自動更新を許可する（更新版は設定ボリューム /home/appuser/.claude に
+# 保存されるため、コンテナを再作成しても保持される）。ARG のピン版は初期導入版の意味。
 
 # システム依存（最小限。build-essential 等のコンパイラ群は入れない）
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -60,15 +59,10 @@ RUN curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - \
  && rm -rf /var/lib/apt/lists/*
 
 # AI CLI（バージョン固定・グローバル / いずれも純JSでコンパイル不要）
-# 更新頻度が低い gemini / codex を先のレイヤーに、頻繁に更新する Claude Code を
-# 独立した後段レイヤーに分ける。これにより CLAUDE_CODE_VERSION だけ変えて再ビルドした際、
-# gemini / codex のレイヤーはキャッシュされ Claude Code だけが再インストールされる。
+# gemini / codex は root のシステム領域へ（更新頻度が低く、ピン版のままでよい）
 RUN npm install -g \
       @google/gemini-cli@${GEMINI_CLI_VERSION} \
       @openai/codex@${CODEX_VERSION} \
- && npm cache clean --force
-
-RUN npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
  && npm cache clean --force
 
 # 非root ユーザー
@@ -79,6 +73,14 @@ RUN groupadd -g 1000 appuser \
  && chown -R appuser:appuser /app
 
 USER appuser
+
+# Claude Code は appuser が書き込める npm prefix（~/.npm-global）へ導入する。
+# root のシステム領域だと appuser の自動更新が権限エラーで失敗するため。
+# ここはコンテナ層（再作成でピン版に戻る）。再作成後も初回起動の自動更新で最新化される。
+RUN npm config set prefix /home/appuser/.npm-global \
+ && npm install -g @anthropic-ai/claude-code@${CLAUDE_CODE_VERSION} \
+ && npm cache clean --force
+ENV PATH=/home/appuser/.npm-global/bin:$PATH
 
 RUN echo "" >> ~/.bashrc \
  && echo "if [ -f /app/.bashrc_aliases ]; then . /app/.bashrc_aliases; fi" >> ~/.bashrc
