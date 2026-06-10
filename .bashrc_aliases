@@ -2,12 +2,6 @@
 # バインドマウントされたプロジェクトを無確認で変更し得るため、リスクを理解した上で使うこと。
 alias c='claude --dangerously-skip-permissions'
 
-# Claude Code の更新はコンテナ内 npm では行わない（再生成で消え、Dockerfile の
-# ARG ピン留めとも乖離する）。更新はホスト側の更新スクリプトに一本化する。
-# コンテナ内からは docker を操作できないため、cu は手順を案内するだけにする。
-cu() {
-  echo "Claude Code の更新はホスト側で次を実行してください:"
-  echo "  ./scripts/update-claude-code          # stable へ更新"
-  echo "  ./scripts/update-claude-code latest   # latest へ更新"
-  echo "（Dockerfile の ARG を書き換えて再ビルドし、更新を永続化します）"
-}
+# Claude Code の更新はコンテナ内では行わない（コンテナ再作成で消え、Dockerfile の
+# ARG ピン留めとも乖離する）。更新はホスト側で ./scripts/update-claude-code を実行する
+# （Dockerfile の ARG を書き換えて再ビルドし、更新を永続化する）。
