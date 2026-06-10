@@ -10,7 +10,7 @@ Python 依存だけを `final` ステージで追加する構成です。`tools`
 
 | ツール | 管理方法 | バージョン |
 |--------|----------|------------|
-| **Claude Code** | tools ステージに焼き込み | 2.1.168（`Dockerfile` の ARG で集中管理） |
+| **Claude Code** | tools ステージに焼き込み+**自動更新あり** | 初期版 2.1.168(ARG)→ 以後は自動で最新化 |
 | **Gemini CLI** | tools ステージに焼き込み | 0.45.2 |
 | **Codex CLI** | tools ステージに焼き込み | 0.137.0 |
 | **Node.js** | tools ステージに焼き込み | 20.x |
@@ -81,30 +81,26 @@ Python 依存だけを `final` ステージで追加する構成です。`tools`
 
 ## Claude Code の更新
 
-Claude Code は更新が頻繁なため、更新スクリプトを用意しています。
-**Dockerfile のピン留めを「正」としたまま**、バージョンの書き換えと再ビルドを 1 コマンドで行います。
+**Claude Code は自動更新されます**(日常のバージョンアップ作業は不要)。
+
+- Claude Code は appuser が書き込める npm prefix(`~/.npm-global`)にインストールしているため、
+  本体の自動更新がコンテナ内でそのまま機能します
+- `Dockerfile` の `ARG CLAUDE_CODE_VERSION` は**初期導入版**の意味。コンテナを作り直すと
+  一旦この版に戻り、以後の起動で再び自動更新されます
+- gemini / codex は root 領域のピン版運用(更新したいときは ARG を変えて再ビルド)
+
+初期導入版(ARG)自体を新しくしたいときは、更新スクリプトが使えます:
 
 ```bash
-# ホスト側で実行（コンテナ内からは docker を操作できないため）
-./scripts/update-claude-code            # stable へ更新（既定）
+# ホスト側で実行(コンテナ内からは docker を操作できないため)
+./scripts/update-claude-code            # stable へ更新(既定)
 ./scripts/update-claude-code latest     # latest へ更新
 ./scripts/update-claude-code 2.1.170    # 明示バージョンへ更新
 ```
 
-スクリプトは次を行います：
-
-1. npm の dist-tag から対象バージョンを取得（既定は回帰を避けやすい **stable**。約1週間遅れ）
-2. `Dockerfile` の `ARG CLAUDE_CODE_VERSION` を書き換え
-3. `docker compose up --build -d` で再ビルド・起動（Claude Code は独立レイヤーなので再インストールは Claude Code のみ）
-4. 反映後の `claude --version` を確認
-
-> コンテナ内の自動更新は `DISABLE_AUTOUPDATER=1` で無効化しています（イメージのピン版と
-> 実行版が乖離するのを防ぐため）。バージョン変更は `Dockerfile` の Git 差分として残ります。
-> 以前の版に戻したいときは、その版を明示指定して再実行すれば安全に戻せます
-> （例: `./scripts/update-claude-code 2.1.168`）。ビルドに失敗した場合はスクリプトが
-> `Dockerfile` を自動で元に戻すため、書き換えだけが残ることはありません。
->
-> コンテナ内で `cu` と打つと、このスクリプトの実行方法が表示されます。
+スクリプトは `ARG CLAUDE_CODE_VERSION` を書き換えて再ビルド・起動・版の確認まで行い、
+失敗時は `Dockerfile` を自動で元に戻します。特定の版に固定したい運用へ戻す場合は、
+その版を明示指定した上で `Dockerfile` に `ENV DISABLE_AUTOUPDATER=1` を戻して再ビルドしてください。
 
 ## 前提条件
 
