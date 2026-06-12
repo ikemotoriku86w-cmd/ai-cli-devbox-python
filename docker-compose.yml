@@ -12,6 +12,10 @@ services:
       - claude-code-config:/home/appuser/.claude
       - codex-config:/home/appuser/.codex
       - gemini-config:/home/appuser/.gemini
+      # 全業務共通のCLAUDE.md・skills(Mac mini側 ~/claude-shared を読み取り専用で共有)
+      - ~/claude-shared:/claude-shared:ro
+      # /tell の郵便受け(書き込み可。Mac mini側 tell-watcher が配達する)
+      - ~/claude-bridge:/claude-bridge
     environment:
       - PYTHONPATH=/app
     command: sleep infinity
