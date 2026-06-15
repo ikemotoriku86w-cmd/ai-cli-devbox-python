@@ -16,8 +16,17 @@ services:
       - ~/claude-shared:/claude-shared:ro
       # /tell の郵便受け(書き込み可。Mac mini側 tell-watcher が配達する)
       - ~/claude-bridge:/claude-bridge
+      - ~/.gitcreds-container:/home/appuser/.gitcreds:ro
     environment:
       - PYTHONPATH=/app
+      - GIT_TERMINAL_PROMPT=0
+      - GIT_CONFIG_COUNT=3
+      - GIT_CONFIG_KEY_0=credential.helper
+      - "GIT_CONFIG_VALUE_0=!f() { cat /home/appuser/.gitcreds; }; f"
+      - GIT_CONFIG_KEY_1=user.name
+      - GIT_CONFIG_VALUE_1=ikemori
+      - GIT_CONFIG_KEY_2=user.email
+      - GIT_CONFIG_VALUE_2=ikemoto.riku.86w@gmail.com
     command: sleep infinity
     tty: true
     stdin_open: true
