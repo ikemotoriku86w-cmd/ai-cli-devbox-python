@@ -14,6 +14,8 @@ services:
       - gemini-config:/home/appuser/.gemini
       # 全業務共通のCLAUDE.md・skills(Mac mini側 ~/claude-shared を読み取り専用で共有)
       - ~/claude-shared:/claude-shared:ro
+      # 社内会議の文字起こし(議事録作成スキル用。読み取り専用)
+      - ~/Sync/recordings:/mnt/transcripts:ro
       # /tell の郵便受け(書き込み可。Mac mini側 tell-watcher が配達する)
       - ~/claude-bridge:/claude-bridge
       - ~/.gitcreds-container:/home/appuser/.gitcreds:ro
