@@ -5,6 +5,7 @@ services:
     # requirements.txt 変更時のみ最終層が再ビルドされる。
     # 固定共有タグ（旧 image: ai-devbox:1.0）は使わないため、タグ上書き衝突は起きない。
     build: .
+    pull_policy: never
     volumes:
       - .:/app
       # 認証・設定は名前付きボリュームに分離（イメージには焼き込まない）。
