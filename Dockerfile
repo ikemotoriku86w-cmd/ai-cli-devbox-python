@@ -31,7 +31,7 @@ FROM ${PYTHON_BASE} AS tools
 # --- バージョン集中管理：更新時はここだけ変えて再ビルド ---
 # （FROM より後で宣言しないとステージ内で参照できない点に注意）
 ARG NODE_MAJOR=20
-ARG CLAUDE_CODE_VERSION=2.1.168
+ARG CLAUDE_CODE_VERSION=2.1.274
 ARG GEMINI_CLI_VERSION=0.45.2
 ARG CODEX_VERSION=0.137.0
 
